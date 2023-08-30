@@ -1,0 +1,30 @@
+========== main ============
+#### Hifini Music Downloader ####
+1. search by name
+2. search by lyric
+...
+
+Command input: 
+
+========== select ==========
+
+Input music name:  
+Input music lyric:
+
+
+======== search list =======
+1
+2
+3
+4
+...
+
+Select one to download: 
+
+
+======== processing ========
+Searching ...
+
+Downloading ...
+
+Complete.

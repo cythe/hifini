@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
 
-# 导入外部依赖
+import os
 import re
 import http
 import urllib.request as urlreq
@@ -10,31 +10,25 @@ import signal
 import sys
 from lxml import etree
 
+# ========== User config ===========
+
+SAVE_DIRECTORY='music'
+PLAYER='vlc'
+
+
+# ======= Downloader Code ==========
+
+homepage = 'https://www.hifini.com/'
 headers={
         'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/110.0',
         }
 
-# ========== 下载器实现 ============
-# 导入requests 库
-import requests
-# 导入 tqdm
-from tqdm import tqdm
-#def download(url: str, file_name: str):
-#    # 文件下载直链
-#    # 请求头
-#    # 发起 head 请求，即只会获取响应头部信息
-#    head = requests.head(url, headers=headers)
-#    # 文件大小，以 B 为单位
-#    file_size = head.headers.get('Content-Length')
-#    if file_size is not None:
-#        file_size = int(file_size)
-#        response = requests.get(url, headers=headers, stream=True)
 
 def set_timeout(num, callback):
     def wrap(func):
         def handle(signum, frame):
             raise RuntimeError
-        
+
         def to_do(*args, **kwargs):
             try:
                 signal.signal(signal.SIGALRM, handle)
@@ -50,34 +44,14 @@ def set_timeout(num, callback):
     return wrap
 
 
-# 1. 构建搜索URL
-
-text = "一生所爱"
-bytes = text.encode('utf-8')
-print(bytes)
-
-ls = []
-for b in bytes:
-    ls.append(format(b, 'X'))
-
-print(ls)
-
-url_search_title = "www.hifini.com/search-_{}-1.htm".format('_'.join(ls))
-print(url_search_title)
-url_search_context = "www.hifini.com/search-_{}-0.htm".format('_'.join(ls))
-print(url_search_context)
-
-# 2. 列出搜索内容
-
-
-# 3. 对某个网页进行操作， 解析内容， 保存mp3, 记得重命名
 def after_timeout():
     print("timeout!!")
     sys.exit(2)
 
+
+# set 30 seconds timeout for page request
 @set_timeout(30, after_timeout)
 def getpage(url):
-    #s=time.time()
     cookie = http.cookiejar.CookieJar()
     handler = urlreq.HTTPCookieProcessor(cookie)
     opener = urlreq.build_opener(handler)
@@ -85,14 +59,11 @@ def getpage(url):
     #req = urlreq.Request(url,headers=headers,method="GET")
     req = urlreq.Request(url,headers=headers)
     res = urlreq.urlopen(req).read()
-    #e=time.time()
-    #print_flushed("getpage: {}\n".format(e-s))
     return res
 
-url = "https://www.hifini.com/thread-346.htm"
 
 def re_find(what, where):
-    obj = re.search('{}:(.*)\'(.*)\''.format(what), where) 
+    obj = re.search('{}:(.*)\'(.*)\''.format(what), where)
     if obj:
         return obj.group(2)
     else:
@@ -106,20 +77,71 @@ def download(url):
     #print(info[0].text)
     aplayer = html.xpath("//div[@class='message break-all']/script")
     print(aplayer[1].text)
-    
+
     title = re_find('title', aplayer[1].text)
-    author = re_find('author', aplayer[1].text) 
+    author = re_find('author', aplayer[1].text)
     music_url = re_find('url', aplayer[1].text)
-    
-    resp = getpage("https://www.hifini.com/{}".format(music_url))
-    with open('{}-{}.mp3'.format(author, title), 'wb') as f:
-        # 写入分块文件
-            f.write(resp)
 
-download(url)
+    resp = getpage("{}{}".format(homepage, music_url))
+    with open('{}/{}-{}.mp3'.format(SAVE_DIRECTORY, author, title), 'wb') as f:
+        f.write(resp)
 
-# if __name__ == "__main__":
-#       main()
-#
-#
-#
+
+def show_main():
+    print("#### Hifini Music Downloader ####")
+    print("1. search by name")
+    print("2. search by lyric")
+    print("3. download directly")
+    print("4. exit")
+    print()
+    select = input("Command input: ")
+    return select
+
+def show_list(url):
+    url = '{}{}'.format(homepage, "thread-346.htm")
+    pass
+
+def str_to_bytes(s):
+    ls = []
+    bytes = s.encode('utf-8')
+    for b in bytes:
+        ls.append(format(b, 'X'))
+    return '_'.join(ls)
+
+
+def show_select(t):
+    if t == '1':
+        s = input("Input music name: ")
+        bytes = str_to_bytes(s)
+        url_search = "{}search-_{}-1.htm".format(homepage, bytes)
+        print(url_search)
+    elif t == '2':
+        s = input("Input music lyric: ")
+        bytes = str_to_bytes(s)
+        url_search = "{}search-_{}-0.htm".format(homepage, bytes)
+        print(url_search)
+    elif t == '3':
+        s = input("Input music page: ")
+        download(s)
+        return 0
+    elif t == '4':
+        sys.exit(0)
+
+    return url_search
+
+
+def gui():
+    while True:
+        select = show_main()
+        search_ret = show_select(select)
+        if search_ret == 0:
+            continue
+        else:
+            print(search_ret)
+
+
+if __name__ == "__main__":
+    if not os.path.exists(SAVE_DIRECTORY):
+        os.mkdir(SAVE_DIRECTORY)
+    gui()
+
