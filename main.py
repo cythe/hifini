@@ -6,7 +6,6 @@ import re
 import http
 import urllib.request as urlreq
 import requests
-import signal
 import sys
 from lxml import etree
 
@@ -24,33 +23,6 @@ headers={
         }
 
 
-def set_timeout(num, callback):
-    def wrap(func):
-        def handle(signum, frame):
-            raise RuntimeError
-
-        def to_do(*args, **kwargs):
-            try:
-                signal.signal(signal.SIGALRM, handle)
-                signal.alarm(num)
-                r = func(*args, **kwargs)
-                signal.alarm(0)
-                return r
-            except RuntimeError as e:
-                callback()
-
-        return to_do
-
-    return wrap
-
-
-def after_timeout():
-    print("timeout!!")
-    sys.exit(2)
-
-
-# set 30 seconds timeout for page request
-@set_timeout(30, after_timeout)
 def getpage(url):
     cookie = http.cookiejar.CookieJar()
     handler = urlreq.HTTPCookieProcessor(cookie)
@@ -77,7 +49,7 @@ def download(url):
     #info = html.xpath("//h4[@class='break-all']")
     #print(info[0].text)
     aplayer = html.xpath("//div[@class='message break-all']/script")
-    print(aplayer[1].text)
+    # print(aplayer[1].text)
 
     title = re_find('title', aplayer[1].text)
     author = re_find('author', aplayer[1].text)
