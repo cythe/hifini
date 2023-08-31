@@ -70,6 +70,7 @@ def re_find(what, where):
         print("No title found.")
         return None
 
+# e.g. https://www.hifini.com/thread-*.htm
 def download(url):
     page = getpage(url).decode('utf-8')
     html = etree.HTML(page)
@@ -95,7 +96,8 @@ def show_main():
     print("4. exit")
     print()
     select = input("Command input: ")
-    return select
+    numbers = re.findall(r"\d+", select)
+    return numbers[0]
 
 def show_list(url):
     url = '{}{}'.format(homepage, "thread-346.htm")
@@ -126,11 +128,13 @@ def show_select(t):
         return 0
     elif t == '4':
         sys.exit(0)
+    else:
+        return 0
 
     return url_search
 
 
-def gui():
+def tui():
     while True:
         select = show_main()
         search_ret = show_select(select)
@@ -143,5 +147,5 @@ def gui():
 if __name__ == "__main__":
     if not os.path.exists(SAVE_DIRECTORY):
         os.mkdir(SAVE_DIRECTORY)
-    gui()
+    tui()
 
