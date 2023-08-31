@@ -2,11 +2,9 @@
 # -*- coding:utf-8 -*-
 
 import os
-import re
-import http
-import urllib.request as urlreq
-import requests
 import sys
+import re
+import requests
 from lxml import etree
 
 # ========== User config ===========
@@ -23,17 +21,6 @@ headers={
         }
 
 
-def getpage(url):
-    cookie = http.cookiejar.CookieJar()
-    handler = urlreq.HTTPCookieProcessor(cookie)
-    opener = urlreq.build_opener(handler)
-    urlreq.install_opener(opener)
-    #req = urlreq.Request(url,headers=headers,method="GET")
-    req = urlreq.Request(url,headers=headers)
-    res = urlreq.urlopen(req).read()
-    return res
-
-
 def re_find(what, where):
     obj = re.search('{}:(.*)\'(.*)\''.format(what), where)
     if obj:
@@ -42,22 +29,40 @@ def re_find(what, where):
         print("No title found.")
         return None
 
+
 # e.g. https://www.hifini.com/thread-*.htm
-def download(url):
-    page = getpage(url).decode('utf-8')
+def get_real_music_data(url):
+    page = requests.get(url, headers=headers).text
     html = etree.HTML(page)
-    #info = html.xpath("//h4[@class='break-all']")
-    #print(info[0].text)
     aplayer = html.xpath("//div[@class='message break-all']/script")
-    # print(aplayer[1].text)
 
     title = re_find('title', aplayer[1].text)
     author = re_find('author', aplayer[1].text)
-    music_url = re_find('url', aplayer[1].text)
+    music_php_url = re_find('url', aplayer[1].text)
 
-    resp = getpage("{}{}".format(homepage, music_url))
-    with open('{}/{}-{}.mp3'.format(SAVE_DIRECTORY, author, title), 'wb') as f:
-        f.write(resp)
+    resp = requests.get("{}{}".format(homepage, music_php_url), headers=headers)
+    if resp.history:
+        # get last response
+        last_response = resp.history[-1]
+        music_real_url = last_response.headers['location']
+
+        music_name = '{}-{}.temp'.format(author, title)
+        return music_name, music_real_url
+    else:
+        return 'NONE'
+
+
+def download_from_music_page(music_page):
+    filename, real_url = get_real_music_data(music_page)
+    if real_url == 'NONE':
+        print("Can't get real_url.")
+        return
+
+    print("Downloading {}...".format(filename))
+    content = requests.get(real_url).content
+    with open('{}/{}'.format(SAVE_DIRECTORY, filename), 'wb') as f:
+        f.write(content)
+
 
 
 def show_main():
@@ -71,9 +76,11 @@ def show_main():
     numbers = re.findall(r"\d+", select)
     return numbers[0]
 
+
 def show_list(url):
     url = '{}{}'.format(homepage, "thread-346.htm")
     pass
+
 
 def str_to_bytes(s):
     ls = []
@@ -96,7 +103,7 @@ def show_select(t):
         print(url_search)
     elif t == '3':
         s = input("Input music page: ")
-        download(s)
+        download_from_music_page(s)
         return 0
     elif t == '4':
         sys.exit(0)
